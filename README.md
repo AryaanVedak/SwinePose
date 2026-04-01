@@ -161,7 +161,6 @@ If you use SwinePose in your research, please cite:
   booktitle = {Proceedings of the 34th ACM International Conference on Multimedia},
   year      = {2026},
   publisher = {ACM},
-  doi       = {10.5281/zenodo.19358700}
 }
 ```
 
