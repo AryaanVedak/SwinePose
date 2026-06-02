@@ -42,9 +42,7 @@ SwinePose/
 │   ├── pig_rtmpose.py              # RTMPose-m
 │   └── pig_vitpose_grayscale.py    # ViTPose-S grayscale input
 ├── tools/
-│   ├── per_keypoint_ap_all.py      # Per-keypoint AP evaluation
-│   ├── sleap_evaluator_videosplit.py  # SLEAP evaluation on test split
-│   └── verify_zenodo_upload.py    # Dataset integrity verification
+│   └── sleap_evaluator_videosplit.py  # SLEAP evaluation on test split
 ├── splits/
 │   └── split_manifest.json        # Exact video-to-split assignment (SEED=42)
 ├── CITATION.cff
