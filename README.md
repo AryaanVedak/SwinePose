@@ -115,6 +115,7 @@ Dataset version 2.0 adds an animal-level split, in which no pig appears in both 
 - `splits/pig_split_manifest.json`: the exact split (training and test pigs and videos, frame counts, selection rule and seed).
 - `tools/make_pig_split.py`: generates the split files from the version 2.0 annotations: `python tools/make_pig_split.py <SwinePose>/annotations`.
 - `splits/measured_oks_sigmas.json`: per-keypoint OKS sigmas measured from two independent annotations.
+- `tools/reliability_analysis.py`: computes all annotation-reliability statistics (Cohen's kappa, distances, ICC(2,1)) and the measured OKS sigmas from the released files: `python tools/reliability_analysis.py <SwinePose folder>` (needs numpy, pandas, pingouin).
 - `tools/run_pig_benchmark.sh`, `tools/eval_pig_benchmark.py`, `tools/sleap_preds_to_coco.py` and `configs/unet/`: train, test and score the five baselines on the animal-level split.
 
 Test pigs were chosen per floor: among the pigs recorded on that floor only, the set whose frame count is closest to 20% of the floor's frames (ties broken with seed 42). The test split has 7 pigs, 15 videos and 655 frames; training has 20 pigs, 70 videos and 3,159 frames.
