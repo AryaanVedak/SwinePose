@@ -1,9 +1,10 @@
 """
-Score the five baselines on the SwinePose animal-level test split (COCO keypoint AP),
-with a uniform sigma of 0.072 and with the per-keypoint sigmas measured from two
-annotators.
+Score the five baselines on a SwinePose test split (COCO keypoint AP), with a uniform
+sigma of 0.072 and with the per-keypoint sigmas measured from two annotators.
 
-    python eval_pig_benchmark.py <run dir with predictions/> <test_pigsplit.json> <measured_oks_sigmas.json>
+    python eval_pig_benchmark.py <run dir with predictions/> <test file> <measured_oks_sigmas.json>
+
+<test file> is test_pigsplit.json (animal-level split) or val_videosplit.json (video-level split).
 
 Writes <run dir>/results.json.
 """

@@ -7,23 +7,39 @@
 
 ## Overview
 
-SwinePose is a lateral-view dataset for markerless pig pose estimation and gait analysis. It comprises **3,778 annotated frames** from **85 videos** of **27 pigs**, recorded at a single research facility (Aarhus University, Research Centre Foulum, Denmark) on three slatted floor types (cast iron, plastic and concrete), with **15 anatomically defined keypoints** per pig in COCO keypoint format.
+SwinePose is a lateral-view dataset for markerless pig pose estimation and gait analysis. It comprises **3,814 annotated frames** from **85 videos** of **27 pigs**, recorded at a single research facility (Aarhus University, Research Centre Foulum, Denmark) on three slatted floor types (cast iron, plastic and concrete), with **15 anatomically defined keypoints** per pig in COCO keypoint format.
 
-**Dataset:** https://doi.org/10.5281/zenodo.19358699
+**Dataset (version 2.0):** https://doi.org/10.5281/zenodo.19358699
+
+This repository contains the training configurations, split files and scripts used to build the benchmark splits, measure annotation reliability and train and evaluate the baselines.
 
 ---
 
 ## Baseline Results
 
-All models evaluated on 679 test frames (17 held-out videos) with uniform σ = 0.072.
+COCO keypoint AP over OKS thresholds 0.50:0.05:0.95. "AP (measured σ)" uses the per-keypoint OKS sigmas measured from two annotators (`splits/measured_oks_sigmas.json`); all other columns use a uniform σ = 0.072.
 
-| Model | AP (0.50:0.95) | AP@0.50 | AP@0.75 | AR |
-|-------|---------------|---------|---------|-----|
-| SLEAP U-Net | 0.951 | 0.989 | 0.965 | 0.966 |
-| ResNet-50 | 0.955 | 0.990 | 0.961 | 0.970 |
-| HRNet-W32 | 0.958 | 0.990 | 0.973 | 0.973 |
-| RTMPose-m | 0.935 | 0.990 | 0.962 | 0.951 |
-| ViTPose-S | 0.960 | 0.990 | 0.965 | 0.974 |
+**Animal-level split (benchmark):** 7 unseen test pigs, 15 videos, 655 frames.
+
+| Model | AP | AP@0.50 | AP@0.75 | AR | AP (measured σ) |
+|-------|-----|---------|---------|-----|-----------------|
+| SLEAP U-Net | 0.912 | 0.968 | 0.913 | 0.953 | 0.858 |
+| ResNet-50 | 0.931 | 0.975 | 0.932 | 0.959 | 0.792 |
+| HRNet-W32 | 0.930 | 0.974 | 0.933 | 0.960 | 0.800 |
+| RTMPose-m | 0.907 | 0.974 | 0.935 | 0.940 | 0.664 |
+| ViTPose-S | 0.937 | 0.970 | 0.937 | 0.964 | 0.813 |
+
+**Video-level split (secondary comparison):** 17 test videos, 714 frames; the test pigs also appear in training videos.
+
+| Model | AP | AP@0.50 | AP@0.75 | AR | AP (measured σ) |
+|-------|-----|---------|---------|-----|-----------------|
+| SLEAP U-Net | 0.945 | 0.989 | 0.962 | 0.963 | 0.910 |
+| ResNet-50 | 0.957 | 0.990 | 0.969 | 0.974 | 0.876 |
+| HRNet-W32 | 0.961 | 0.990 | 0.971 | 0.976 | 0.874 |
+| RTMPose-m | 0.929 | 0.989 | 0.958 | 0.949 | 0.712 |
+| ViTPose-S | 0.963 | 0.990 | 0.973 | 0.975 | 0.884 |
+
+Each model was trained once (seed 42). With seven test pigs, the animal-level scores depend in part on which pigs were selected.
 
 ---
 
@@ -31,18 +47,25 @@ All models evaluated on 679 test frames (17 held-out videos) with uniform σ = 0
 
 ```
 SwinePose/
-├── configs/                          # MMPose training configs
+├── configs/
 │   ├── pig_hrnet.py                  # HRNet-W32
 │   ├── pig_resnet50.py               # ResNet-50 SimpleBaseline
 │   ├── pig_rtmpose.py                # RTMPose-m
 │   ├── pig_vitpose_stage1.py         # ViTPose-S stage 1 (frozen backbone)
-│   └── pig_vitpose_stage2.py         # ViTPose-S stage 2 (full fine-tuning)
-├── tools/
-│   └── sleap_evaluator_videosplit.py # SLEAP evaluation on the test split
+│   ├── pig_vitpose_stage2.py         # ViTPose-S stage 2 (full fine-tuning)
+│   └── unet/                         # SLEAP U-Net (centroid + centered-instance)
 ├── splits/
-│   ├── split_manifest.json           # Video-to-split assignment (SEED=42)
-│   ├── train_internal.json           # Internal training split (2,634 frames)
-│   └── val_internal.json             # Internal checkpoint-selection split (465 frames)
+│   ├── pig_split_manifest.json       # Animal-level split: pigs, videos, rule and seed
+│   ├── split_manifest.json           # Video-level split and the pig ID of each video
+│   └── measured_oks_sigmas.json      # Per-keypoint OKS sigmas from two annotators
+├── tools/
+│   ├── make_pig_split.py             # Generates the animal-level split files
+│   ├── reliability_analysis.py       # Annotation-reliability statistics and measured sigmas
+│   ├── run_pig_benchmark.sh          # Trains and tests the five baselines (animal-level split)
+│   ├── run_video_benchmark.sh        # Same for the video-level split
+│   ├── eval_pig_benchmark.py         # Scores the predictions (σ = 0.072 and measured σ)
+│   ├── sleap_preds_to_coco.py        # Converts SLEAP predictions to COCO results
+│   └── sleap_evaluator_videosplit.py # Earlier SLEAP evaluation script (video-level split)
 ├── LICENSE
 └── README.md
 ```
@@ -53,18 +76,29 @@ SwinePose/
 
 ### 1. Download the dataset
 
-Download `SwinePose_v1.0.zip` from https://doi.org/10.5281/zenodo.19358699 and extract it. The data are in `SwinePose_Zenodo/dataset/`:
+Download `SwinePose_v2.0.zip` from https://doi.org/10.5281/zenodo.19358699 and extract it:
 
 ```
-annotations/
-    train_videosplit.json   # 68 training videos, 3,099 frames
-    val_videosplit.json     # 17 test videos, 679 frames
-    split_manifest.json     # Video-to-split assignment
-images/
-    *.jpg                   # 3,778 frames (720 × 576)
+SwinePose/
+├── README.md
+├── CHANGES_v1_to_v2.json             # Every added and corrected frame since version 1.0
+├── annotations/
+│   ├── train_pigsplit.json           # Animal-level training split: 20 pigs, 70 videos, 3,159 frames
+│   ├── test_pigsplit.json            # Animal-level test split: 7 pigs, 15 videos, 655 frames
+│   ├── train_pigsplit_internal.json  # Training part of the animal-level training split (2,685 frames)
+│   ├── val_pigsplit_internal.json    # Checkpoint-selection part (474 frames)
+│   ├── pig_split_manifest.json
+│   ├── train_videosplit.json         # Video-level training split: 68 videos, 3,100 frames
+│   ├── val_videosplit.json           # Video-level test split: 17 videos, 714 frames
+│   ├── train_internal.json           # Training part of the video-level training split (2,635 frames)
+│   ├── val_internal.json             # Checkpoint-selection part (465 frames)
+│   └── split_manifest.json
+├── images/                           # 3,814 frames (720 × 576)
+└── reliability/
+    └── second_annotator.json         # Independent second annotation of 255 frames
 ```
 
-Copy `splits/train_internal.json` and `splits/val_internal.json` from this repository into `annotations/`. The MMPose configs train on these files.
+Use the animal-level split for benchmarking: no pig appears in both training and test.
 
 ### 2. Install dependencies
 
@@ -79,9 +113,11 @@ SLEAP U-Net:
 pip install "sleap==1.6.1"
 ```
 
-### 3. Train a model
+### 3. Train and evaluate
 
-Copy the files in `configs/` into your MMPose installation's `configs/` folder, set `data_root` in each config to your `SwinePose_Zenodo/dataset/` path, then:
+To reproduce all five baselines, set the paths at the top of `tools/run_pig_benchmark.sh` (animal-level split) or `tools/run_video_benchmark.sh` (video-level split) and run it. The script header lists the preparation steps.
+
+To train a single MMPose model, copy the files in `configs/` into your MMPose installation's `configs/` folder and set `data_root` in each config to your extracted `SwinePose/` folder. The configs train on the video-level files by default; the run scripts switch them to the animal-level files with `--cfg-options`.
 
 ```bash
 cd /path/to/mmpose
@@ -97,28 +133,18 @@ python tools/train.py configs/pig_vitpose_stage2.py \
 python tools/train.py configs/pig_hrnet.py    --work-dir /path/to/checkpoints/hrnet
 python tools/train.py configs/pig_resnet50.py --work-dir /path/to/checkpoints/resnet50
 python tools/train.py configs/pig_rtmpose.py  --work-dir /path/to/checkpoints/rtmpose
+
+# Test
+python tools/test.py configs/pig_hrnet.py /path/to/checkpoints/hrnet/best_coco_AP_epoch_XX.pth
 ```
 
-### 4. Evaluate a model
+### 4. Annotation reliability
 
 ```bash
-python tools/test.py configs/pig_hrnet.py \
-    /path/to/checkpoints/hrnet/best_coco_AP_epoch_XX.pth
+python tools/reliability_analysis.py /path/to/SwinePose   # needs numpy, pandas, pingouin
 ```
 
----
-
-## Animal-level benchmark (dataset version 2.0)
-
-Dataset version 2.0 adds an animal-level split, in which no pig appears in both training and test, and uses it as the benchmark split. The files in this repository:
-
-- `splits/pig_split_manifest.json`: the exact split (training and test pigs and videos, frame counts, selection rule and seed).
-- `tools/make_pig_split.py`: generates the split files from the version 2.0 annotations: `python tools/make_pig_split.py <SwinePose>/annotations`.
-- `splits/measured_oks_sigmas.json`: per-keypoint OKS sigmas measured from two independent annotations.
-- `tools/reliability_analysis.py`: computes all annotation-reliability statistics (Cohen's kappa, distances, ICC(2,1)) and the measured OKS sigmas from the released files: `python tools/reliability_analysis.py <SwinePose folder>` (needs numpy, pandas, pingouin).
-- `tools/run_pig_benchmark.sh`, `tools/eval_pig_benchmark.py`, `tools/sleap_preds_to_coco.py` and `configs/unet/`: train, test and score the five baselines on the animal-level split.
-
-Test pigs were chosen per floor: among the pigs recorded on that floor only, the set whose frame count is closest to 20% of the floor's frames (ties broken with seed 42). The test split has 7 pigs, 15 videos and 655 frames; training has 20 pigs, 70 videos and 3,159 frames.
+This reproduces the inter-annotator agreement (Cohen's κ 0.947, mean distance 7.9 px, ICC(2,1)) and the measured OKS sigmas from the released files.
 
 ---
 
@@ -142,7 +168,7 @@ Test pigs were chosen per floor: among the pigs recorded on that floor only, the
 | 13 | left_stifle | Hindlimb |
 | 14 | rear_left_toe | Distal |
 
-Left-side keypoints are not visible to the camera and were estimated from anatomy and bilateral symmetry.
+The camera sees the pig's right side. Axial and right-side keypoints are placed from direct observation; left-side keypoints are estimated from anatomy and bilateral symmetry and are not flagged separately in the files.
 
 ---
 
@@ -153,7 +179,7 @@ If you use SwinePose in your research, please cite:
 ```bibtex
 @misc{vedak2026swinepose,
   title     = {SwinePose: A Lateral-View Benchmark Dataset for Pig Pose Estimation and Gait Analysis},
-  author    = {Vedak, Aryaan Dilip and Lai, Forbes and Thorup, Vivi M{\o}rk{\o}re and Mahmoud, Marwa},
+  author    = {Vedak, Aryaan Dilip and Thorup, Vivi M{\o}rk{\o}re and Mahmoud, Marwa},
   year      = {2026},
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.19358699}
@@ -172,6 +198,5 @@ The SwinePose dataset is released under [CC BY 4.0](https://creativecommons.org/
 ## Authors
 
 - Aryaan Dilip Vedak, University of Glasgow
-- Forbes Lai, University of Glasgow
 - Vivi M. Thorup, Aarhus University
 - Marwa Mahmoud, University of Glasgow
